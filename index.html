@@ -1,0 +1,743 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Restaurant POS</title>
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--panel2:#1f2630;--line:#2b3441;--text:#e6edf3;--mute:#8b98a9;--accent:#ff8a3d;--onacc:#1a0f05;--ok:#34d399;--warn:#fbbf24;--bad:#f87171;--blue:#60a5fa;--purple:#c084fc;--shadow:0 8px 28px #0007}
+[data-theme=light]{--bg:#f1f4f8;--panel:#fff;--panel2:#eef1f5;--line:#d9dfe7;--text:#14202e;--mute:#5d6b7d;--accent:#e8590c;--onacc:#fff;--ok:#0f9f6e;--warn:#b7791f;--bad:#d64545;--blue:#2563eb;--purple:#7c3aed;--shadow:0 8px 28px #0f172a22}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.4 system-ui,"Segoe UI",sans-serif;overflow:hidden}
+button{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 14px;cursor:pointer;transition:.12s}
+button:hover{border-color:var(--accent)}
+button:active{transform:scale(.97)}
+button.pri{background:var(--accent);color:var(--onacc);border-color:var(--accent);font-weight:650}
+button.ok{background:var(--ok);color:#04210f;border-color:var(--ok);font-weight:650}
+button.bad{background:transparent;color:var(--bad);border-color:var(--bad)}
+button.sm{padding:3px 9px;font-size:12px;border-radius:7px}
+button.on{background:var(--accent);color:var(--onacc);border-color:var(--accent)}
+button:disabled{opacity:.4;cursor:not-allowed}
+input,select,textarea{font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px 10px;width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+label{display:block;color:var(--mute);font-size:12px;margin:10px 0 3px}
+h2{margin:0}
+.shell{display:flex;height:100vh}
+.rail{width:84px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:stretch;padding:10px 8px;gap:4px}
+.rail .logo{text-align:center;font-size:26px;margin-bottom:8px}
+.rail button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 2px;font-size:11px;border:0;background:transparent;color:var(--mute);position:relative}
+.rail button span{font-size:21px;line-height:1}
+.rail button.on{background:var(--accent);color:var(--onacc)}
+.rail .sp{flex:1}
+.badge{position:absolute;top:3px;right:8px;background:var(--bad);color:#fff;border-radius:99px;font-size:10px;padding:0 6px;font-weight:700}
+.content{flex:1;display:flex;flex-direction:column;min-width:0}
+.topbar{display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid var(--line);background:var(--panel)}
+.topbar h2{font-size:18px;flex:1}
+main{flex:1;overflow:auto;padding:16px 18px}
+main.fit{overflow:hidden}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:99px;font-size:12px;background:var(--panel2);color:var(--mute);border:1px solid var(--line);white-space:nowrap}
+.chip.ok{color:var(--ok);border-color:var(--ok)}.chip.warn{color:var(--warn);border-color:var(--warn)}.chip.bad{color:var(--bad);border-color:var(--bad)}.chip.blue{color:var(--blue);border-color:var(--blue)}.chip.pur{color:var(--purple);border-color:var(--purple)}
+.tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;background:var(--panel2);color:var(--mute)}
+.tag.new{background:#60a5fa33;color:var(--blue)}.tag.sent{background:#fbbf2433;color:var(--warn)}.tag.held{background:#c084fc33;color:var(--purple)}.tag.ready{background:#34d39933;color:var(--ok)}.tag.served{color:var(--mute)}.tag.paid{background:#34d39933;color:var(--ok)}.tag.void,.tag.refunded{background:#f8717133;color:var(--bad)}
+.row{display:flex;gap:8px;align-items:center}.row>*{flex:1}.row>.fx{flex:0 0 auto}
+.grid{display:grid;gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
+.card h3{margin:0 0 8px;font-size:14px;color:var(--mute);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.floor{display:grid;grid-template-columns:1fr 310px;gap:14px;height:100%}
+.planwrap{overflow:auto;min-height:0}
+.plan{position:relative;aspect-ratio:16/8.6;min-width:760px;background:radial-gradient(var(--line) 1px,transparent 1px) 0 0/22px 22px;border:1px dashed var(--line);border-radius:16px}
+.plan.edit{border-color:var(--accent)}
+.tile{position:absolute;background:var(--panel);border:2px solid var(--line);padding:8px;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;box-shadow:var(--shadow);user-select:none;touch-action:none}
+.tile b{font-size:17px}.tile small{color:var(--mute)}
+.tile.round{border-radius:50%;align-items:center;text-align:center;justify-content:center}
+.tile.sq{border-radius:14px}
+.tile.occ{border-color:var(--warn)}.tile.rdy{border-color:var(--ok);box-shadow:0 0 18px #34d39966}.tile.late{border-color:var(--bad)}.tile.bill{border-color:var(--purple)}.tile.rsv{border-color:var(--blue);border-style:dashed}
+.plan.edit .tile{cursor:move;outline:2px dashed var(--accent);outline-offset:3px}
+.sidecol{display:flex;flex-direction:column;gap:12px;overflow:auto;min-height:0}
+.li{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}
+.li:last-child{border-bottom:0}
+.order{display:grid;grid-template-columns:1fr 410px;gap:14px;height:100%}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;min-height:0}
+.cats{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.cats button{border-left:4px solid var(--c,var(--line))}
+.cats button.on{background:var(--accent);color:var(--onacc)}
+.items{grid-template-columns:repeat(auto-fill,minmax(145px,1fr));overflow:auto;align-content:start;margin-top:10px;padding-bottom:6px}
+.item{background:var(--panel2);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:11px;padding:10px;cursor:pointer;min-height:86px;display:flex;flex-direction:column;justify-content:space-between;gap:6px}
+.item:hover{border-color:var(--accent)}
+.item.off{opacity:.35;pointer-events:none}
+.al{display:inline-block;font-size:10px;padding:0 5px;border-radius:5px;background:var(--panel);border:1px solid var(--line);color:var(--mute);margin-right:3px}
+.seatbar{display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin:8px 0 0}
+.seatbar button{padding:2px 9px;font-size:12px;border-radius:99px}
+.lines{flex:1;overflow:auto;margin:6px 0}
+.chead{display:flex;justify-content:space-between;align-items:center;margin:10px 0 2px;color:var(--purple);font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+.line{padding:7px 0;border-bottom:1px solid var(--line)}
+.line .r{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.line small{color:var(--mute);display:block}
+.qty{display:flex;align-items:center;gap:6px;white-space:nowrap}.qty button{padding:1px 9px}
+.tot div{display:flex;justify-content:space-between;padding:1px 0;color:var(--mute)}
+.tot .g{font-size:24px;color:var(--text);font-weight:750}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.modalbg{position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;z-index:10;padding:14px;backdrop-filter:blur(3px)}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;width:min(560px,100%);max-height:94vh;overflow:auto;box-shadow:var(--shadow)}
+.modal.wide{width:min(760px,100%)}
+.modal h3{margin:0 0 8px}
+.seg{display:flex;gap:0}.seg button{white-space:nowrap;flex:1;border-radius:0}.seg button:first-child{border-radius:10px 0 0 10px}.seg button:last-child{border-radius:0 10px 10px 0}
+.kds{grid-template-columns:repeat(auto-fill,minmax(270px,1fr));align-items:start}
+.tick{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:12px}
+.tick.mid{border-color:var(--warn)}.tick.late{border-color:var(--bad);box-shadow:0 0 16px #f8717155}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line)}th{color:var(--mute);font-weight:500;font-size:12px}
+td.n,th.n{text-align:right}
+.stats{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.stat b{font-size:26px;display:block;margin-top:2px}.stat span{color:var(--mute);font-size:12px}.stat i{font-style:normal;font-size:12px}
+.up{color:var(--ok)}.down{color:var(--bad)}
+.bar{height:8px;background:var(--accent);border-radius:4px}
+.chart{width:100%;height:auto}
+.login{margin:auto;width:340px;text-align:center}
+.login .logo{font-size:54px}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}.pad button{padding:18px;font-size:22px}
+.dots{font-size:30px;letter-spacing:10px;height:42px}
+.receipt{font-family:Consolas,monospace;background:#fff;color:#000;padding:16px;border-radius:8px;font-size:13px}
+.receipt .l{display:flex;justify-content:space-between}.receipt hr{border:0;border-top:1px dashed #000}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ok);color:#04210f;padding:10px 20px;border-radius:99px;font-weight:650;z-index:30;box-shadow:var(--shadow)}
+.toast.err{background:var(--bad);color:#fff}
+.quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.sel{display:flex;gap:8px;align-items:center;padding:7px 8px;border:1px solid var(--line);border-radius:10px;margin:4px 0;cursor:pointer}
+.sel.on{border-color:var(--accent);background:var(--panel2)}
+.sel input{width:auto}
+.hint{color:var(--mute);font-size:12px}
+@media(max-width:980px){.floor,.order{grid-template-columns:1fr;height:auto}.rail{width:62px}.rail button{font-size:0}.rail button span{font-size:22px}}
+@media print{body *{visibility:hidden}.receipt,.receipt *{visibility:visible}.receipt{position:absolute;left:0;top:0;width:80mm}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+'use strict';
+/* ===================== CORE ===================== */
+const KEY='restaurant_pos_v2';
+const uid=()=>Math.random().toString(36).slice(2,9);
+const rng=s=>()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const round=n=>Math.round((n+Number.EPSILON)*100)/100;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const money=n=>(n<0?'-':'')+db.settings.currency+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const ymd=d=>{d=new Date(d);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const dayStart=(t=Date.now())=>new Date(t).setHours(0,0,0,0);
+const fmtT=t=>new Date(t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+const mins=t=>Math.floor((Date.now()-t)/60000);
+const ago=t=>{const m=mins(t);return m<1?'<1m':m<60?m+'m':Math.floor(m/60)+'h '+m%60+'m'};
+const ALG={G:'Gluten',D:'Dairy',N:'Nuts',S:'Shellfish',V:'Vegan'};
+let db;
+
+function seed(){
+  const R=rng(7),pick=a=>a[Math.floor(R()*a.length)];
+  const d={v:2,demo:true,seq:1001,orders:[],res:[],wait:[],shifts:[],clock:[],audit:[],
+    settings:{name:'The Golden Fork',address:'12 Main Street',tax:10,service:0,currency:'$',theme:'dark',sound:true,tips:[10,15,20],warn:10,late:20,
+      hh:{on:true,start:'16:00',end:'18:00',pct:20,cats:['Drinks']}},
+    cats:[{name:'Starters',station:'Kitchen',color:'#f59e0b'},{name:'Mains',station:'Grill',color:'#ef4444'},{name:'Pizza',station:'Kitchen',color:'#f97316'},{name:'Desserts',station:'Dessert',color:'#ec4899'},{name:'Drinks',station:'Bar',color:'#3b82f6'}],
+    menu:[],tables:[],staff:[]};
+  db=d;
+  const donen=[{name:'Rare',price:0},{name:'Medium rare',price:0},{name:'Medium',price:0},{name:'Well done',price:0},{name:'Peppercorn sauce',price:2}];
+  const m=(name,cat,price,cost,al='',mods=[],stock=null)=>d.menu.push({id:uid(),name,cat,price,cost,allergens:al.split('').filter(Boolean),mods,stock,active:true});
+  m('Garlic Bread','Starters',5.5,1.1,'GD');m('Tomato Soup','Starters',6.5,1.4,'V');m('Calamari','Starters',9.5,2.6,'GS',[{name:'Extra aioli',price:1}]);m('Bruschetta','Starters',7,1.5,'GV');m('Burrata','Starters',11,3.8,'D');
+  m('Ribeye Steak','Mains',27,10.5,'',donen);m('Grilled Salmon','Mains',22,7.8);m('Chicken Parmesan','Mains',18.5,5.2,'GD');m('Mushroom Risotto','Mains',16,3.9,'D');
+  m('Cheeseburger','Mains',15,4.6,'GD',[{name:'Bacon',price:2},{name:'Extra patty',price:4},{name:'No onion',price:0}]);m('Lamb Rack','Mains',29,12.4,'',donen.slice(1,4),4);m('Fish and Chips','Mains',17,4.8,'G');
+  m('Margherita','Pizza',13,2.9,'GD',[{name:'Extra cheese',price:2}]);m('Pepperoni','Pizza',15,3.8,'GD',[{name:'Extra cheese',price:2},{name:'Jalapenos',price:1}]);m('Quattro Formaggi','Pizza',16.5,4.4,'GD');m('Vegan Garden','Pizza',14,3.2,'GV');
+  m('Tiramisu','Desserts',8,2.1,'GD');m('Cheesecake','Desserts',7.5,1.9,'GD');m('Ice Cream','Desserts',5,1.0,'D');m('Chocolate Fondant','Desserts',9,2.4,'GDN','',6);
+  m('Cola','Drinks',3.5,.5,'V');m('Sparkling Water','Drinks',3,.4,'V');m('House Red','Drinks',8,2.2,'V');m('House White','Drinks',8,2.2,'V');m('Craft Beer','Drinks',6.5,1.7,'G');m('Espresso','Drinks',3,.4,'V');m('Latte','Drinks',4,.7,'D');m('Mojito','Drinks',10,2.3,'V');m('Old Fashioned','Drinks',12,2.8,'V');
+  const T=(name,x,y,w,h,shape,seats,section)=>d.tables.push({id:uid(),name,x,y,w,h,shape,seats,section});
+  T('T1',4,6,13,22,'sq',2,'Main');T('T2',22,6,13,22,'sq',2,'Main');T('T3',40,6,13,22,'sq',4,'Main');T('T4',58,6,13,22,'sq',4,'Main');
+  T('T5',4,38,13,24,'round',4,'Main');T('T6',22,38,13,24,'round',4,'Main');T('T7',40,38,20,24,'sq',6,'Main');
+  T('T8',4,72,22,22,'sq',8,'Main');T('P1',48,72,13,22,'round',4,'Patio');T('P2',66,72,13,22,'round',4,'Patio');
+  T('B1',82,4,13,22,'round',1,'Bar');T('B2',82,30,13,22,'round',1,'Bar');T('B3',82,56,13,22,'round',1,'Bar');
+  const mgr={id:uid(),name:'Alex Morgan',pin:'1234',role:'manager',rate:28},s1={id:uid(),name:'Sam Rivera',pin:'1111',role:'server',rate:15},s2={id:uid(),name:'Jo Chen',pin:'3333',role:'server',rate:15},chef={id:uid(),name:'Chef Maria',pin:'2222',role:'kitchen',rate:24};
+  d.staff.push(mgr,s1,s2,chef);
+  const catOf=n=>d.cats.find(c=>c.name===n);
+  const L=(name,qty=1,state='sent',o={})=>{const it=d.menu.find(i=>i.name===name);return{id:uid(),itemId:it.id,key:uid(),name,cat:it.cat,station:catOf(it.cat).station,price:it.price,qty,mods:(o.mods||[]).map(n=>({name:n,price:0})),note:o.note||'',seat:o.seat||1,course:o.course||1,state,sentAt:state==='new'?undefined:Date.now()-(o.ago||10)*60000,readyAt:state==='ready'?Date.now()-3*60000:undefined}};
+  const O=(tn,srv,guests,minsAgo,items,x={})=>{const t=d.tables.find(t=>t.name===tn);d.orders.push({id:uid(),no:d.seq++,tableId:t?t.id:null,type:t?'dine':'takeaway',server:srv.name,status:'open',items,discount:null,payments:[],created:Date.now()-minsAgo*60000,guests,fired:1,...x})};
+  /* history */
+  const todayS=dayStart();
+  for(let back=29;back>=0;back--){
+    const day=todayS-back*864e5,dow=new Date(day).getDay(),n=back===0?14:Math.round((dow===5||dow===6?30:dow===0?24:18)+R()*8);
+    for(let i=0;i<n;i++){
+      let closed=back===0?Math.max(todayS+60000,Date.now()-(15+R()*600)*60000):day+(pick([12,12,13,13,14,17,18,18,19,19,19,20,20,21])*60+Math.floor(R()*55))*60000;
+      const lines=[],k=2+Math.floor(R()*5);
+      for(let j=0;j<k;j++){const it=pick(d.menu);lines.push(L(it.name,R()<.2?2:1,'served',{ago:0}))}
+      const o={id:uid(),no:d.seq++,tableId:pick(d.tables).id,type:R()<.12?'takeaway':'dine',server:pick([s1.name,s1.name,s2.name]),status:'paid',items:lines,discount:R()<.06?{type:'%',val:10,by:mgr.name,reason:'Regular guest'}:null,payments:[],created:closed-50*60000,closed,guests:1+Math.floor(R()*4)};
+      const t=totals(o),method=R()<.62?'card':R()<.9?'cash':'voucher',tip=method==='card'?round(t.total*pick([0,.1,.15,.18,.2])):0;
+      o.payments.push({id:uid(),method,amount:t.total,tip,at:closed,by:o.server,tendered:null,change:0});
+      d.orders.push(o);
+    }
+  }
+  /* live floor */
+  O('T2',s1,2,40,[L('Burrata',1,'ready',{ago:28}),L('Calamari',1,'ready',{ago:28,seat:2}),L('Ribeye Steak',1,'held',{course:2,mods:['Medium rare']}),L('Mushroom Risotto',1,'held',{course:2,seat:2}),L('House Red',2,'served',{ago:35})]);
+  O('T3',s2,2,26,[L('Ribeye Steak',1,'sent',{ago:22,mods:['Medium']}),L('Grilled Salmon',1,'sent',{ago:22,seat:2,note:'No butter'}),L('Cola',2,'served',{ago:25})]);
+  O('T5',s1,4,10,[L('Cola',2,'sent',{ago:6}),L('Garlic Bread',1,'sent',{ago:6}),L('Pepperoni',1,'new',{mods:['Extra cheese']}),L('Craft Beer',2,'new')]);
+  O('T7',s2,6,105,[L('Lamb Rack',2,'served',{ago:80,mods:['Medium']}),L('Fish and Chips',2,'served',{ago:80}),L('Cheesecake',3,'served',{ago:40}),L('House White',3,'served',{ago:80})],{billReq:true});
+  O('B2',s1,1,12,[L('Old Fashioned',1,'sent',{ago:4}),L('Calamari',1,'sent',{ago:4})]);
+  O(null,s1,1,15,[L('Cheeseburger',2,'sent',{ago:14,mods:['Bacon']}),L('Fish and Chips',1,'sent',{ago:14})],{cust:'Priya'});
+  /* bookings */
+  const today=ymd(Date.now()),tm=n=>d.tables.find(t=>t.name===n).id;
+  d.res.push({id:uid(),name:'Okafor party',size:4,date:today,time:'19:00',phone:'555 0142',note:'Birthday, cake',status:'booked',tableId:tm('T4')},
+    {id:uid(),name:'Lindqvist',size:2,date:today,time:'19:30',phone:'555 0177',note:'Window seat',status:'booked',tableId:tm('T1')},
+    {id:uid(),name:'Patel',size:6,date:today,time:'20:15',phone:'555 0108',note:'Nut allergy',status:'booked',tableId:null},
+    {id:uid(),name:'Martinez',size:3,date:ymd(Date.now()+864e5),time:'18:30',phone:'555 0191',note:'',status:'booked',tableId:null});
+  d.wait.push({id:uid(),name:'Hughes',size:2,added:Date.now()-12*60000,quote:20},{id:uid(),name:'Tanaka',size:5,added:Date.now()-4*60000,quote:35});
+  d.shifts.push({id:uid(),openedBy:mgr.name,openedAt:Math.min(todayS+9*36e5,Date.now()-60000),float:200,tx:[{id:uid(),at:Date.now()-3*36e5,type:'out',amount:35,reason:'Ice delivery',by:mgr.name}]});
+  d.clock.push({id:uid(),staffId:mgr.id,in:Date.now()-5*36e5},{id:uid(),staffId:s1.id,in:Date.now()-4*36e5},{id:uid(),staffId:chef.id,in:Date.now()-5*36e5});
+  d.audit.push({t:Date.now()-2*36e5,user:mgr.name,text:'Approved 10% discount on order #'+(d.seq-9)});
+  return d;
+}
+function load(){try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&d.v===2){db=d;return d}}catch(e){}const d=seed();db=d;save();return d}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){toast('Storage full, export a backup',true)}}
+function log(text){db.audit.unshift({t:Date.now(),user:S.user?S.user.name:'system',text});db.audit.length=Math.min(db.audit.length,400)}
+
+/* ===================== DOMAIN ===================== */
+const lineUnit=l=>l.price+l.mods.reduce((a,m)=>a+m.price,0);
+const lineTotal=l=>lineUnit(l)*l.qty;
+function totals(o){
+  const sub=round(o.items.filter(i=>!i.void).reduce((a,l)=>a+lineTotal(l),0));
+  let disc=0;if(o.discount){disc=o.discount.type==='%'?sub*o.discount.val/100:o.discount.val;disc=round(Math.min(disc,sub))}
+  const net=sub-disc,service=round(net*db.settings.service/100),tax=round((net+service)*db.settings.tax/100),total=round(net+service+tax);
+  const paid=round(o.payments.reduce((a,p)=>a+p.amount,0)),tips=round(o.payments.reduce((a,p)=>a+(p.tip||0),0));
+  return{sub,disc,service,tax,total,paid,tips,due:round(total-paid)};
+}
+const catOf=n=>db.cats.find(c=>c.name===n)||{name:n,station:'Kitchen',color:'#888'};
+const tbl=id=>db.tables.find(t=>t.id===id);
+const ord=id=>db.orders.find(o=>o.id===id);
+const tableOrder=tid=>db.orders.find(o=>o.status==='open'&&o.tableId===tid);
+const openOrders=()=>db.orders.filter(o=>o.status==='open');
+function hhActive(){const h=db.settings.hh;if(!h.on)return false;const n=new Date(),m=n.getHours()*60+n.getMinutes(),[a,b]=[h.start,h.end].map(t=>{const[x,y]=t.split(':');return+x*60+ +y});return a<=b?m>=a&&m<b:(m>=a||m<b)}
+const priceFor=it=>hhActive()&&db.settings.hh.cats.includes(it.cat)?round(it.price*(1-db.settings.hh.pct/100)):it.price;
+const orderName=o=>o.type==='dine'?(tbl(o.tableId)?.name||'Table'):'Takeaway #'+o.no;
+const currentShift=()=>db.shifts.find(s=>!s.closedAt);
+
+/* ===================== STATE ===================== */
+const S={user:null,view:'floor',orderId:null,cat:null,search:'',pin:'',range:'today',station:'All',kview:'live',seat:0,course:1,edit:false,mode:'plan',tab:'menu',lastSent:null,P:null,msearch:''};
+const isMgr=()=>S.user&&S.user.role==='manager';
+const NAV=[
+  {k:'floor',i:'🪑',l:'Floor',r:['manager','server']},{k:'order',i:'🧾',l:'Order',r:['manager','server']},
+  {k:'kitchen',i:'👨‍🍳',l:'Kitchen',r:['manager','server','kitchen']},{k:'book',i:'📅',l:'Book',r:['manager','server']},
+  {k:'bills',i:'📚',l:'Bills',r:['manager','server']},{k:'reports',i:'📊',l:'Reports',r:['manager']},
+  {k:'cash',i:'💵',l:'Cash',r:['manager']},{k:'admin',i:'⚙️',l:'Admin',r:['manager']}];
+
+function toast(msg,err){const t=document.createElement('div');t.className='toast'+(err?' err':'');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2400)}
+function modal(html,wide){shut();const d=document.createElement('div');d.className='modalbg';d.id='modal';d.innerHTML='<div class="modal'+(wide?' wide':'')+'">'+html+'</div>';d.addEventListener('mousedown',e=>{if(e.target===d)shut()});document.body.appendChild(d)}
+function shut(){const m=$('#modal');if(m)m.remove()}
+function beep(){if(!db.settings.sound)return;try{const c=new(window.AudioContext||window.webkitAudioContext)(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.frequency.value=880;g.gain.setValueAtTime(.15,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.4);o.start();o.stop(c.currentTime+.4)}catch(e){}}
+const apprHtml=()=>isMgr()?'':`<label>Manager PIN to approve</label><input id="apin" type="password" inputmode="numeric" maxlength="4" autocomplete="off">`;
+function appr(){if(isMgr())return S.user;const el=$('#apin'),m=db.staff.find(s=>s.role==='manager'&&el&&s.pin===el.value.trim());if(!m){toast('Valid manager PIN required',true);return null}return m}
+const cancelBtn=`<button onclick="A.shut()">Cancel</button>`;
+
+/* ===================== RENDER ===================== */
+function render(){
+  document.documentElement.dataset.theme=db.settings.theme;
+  const app=$('#app');
+  if(!S.user){app.innerHTML=loginView();return}
+  const nav=NAV.filter(n=>n.r.includes(S.user.role));
+  if(!nav.some(n=>n.k===S.view))S.view=nav[0].k;
+  const V={floor:floorView,order:orderView,kitchen:kitchenView,book:bookView,bills:billsView,reports:reportsView,cash:cashView,admin:adminView};
+  const ready=openOrders().reduce((a,o)=>a+o.items.filter(l=>l.state==='ready'&&!l.void).length,0);
+  const sh=currentShift(),clocked=db.clock.find(c=>c.staffId===S.user.id&&!c.out);
+  const body=V[S.view]();
+  app.innerHTML=`<div class="shell"><aside class="rail"><div class="logo">🍽</div>
+    ${nav.map(n=>`<button class="${S.view===n.k?'on':''}" onclick="A.go('${n.k}')"><span>${n.i}</span>${n.l}${n.k==='floor'&&ready?`<i class="badge">${ready}</i>`:''}</button>`).join('')}
+    <div class="sp"></div><button onclick="A.theme()"><span>${db.settings.theme==='dark'?'☀️':'🌙'}</span>Theme</button>
+    <button onclick="A.clock()"><span>${clocked?'⏱':'⏰'}</span>${clocked?'Clock out':'Clock in'}</button><button onclick="A.logout()"><span>🔒</span>Lock</button></aside>
+    <section class="content"><div class="topbar"><h2>${esc(db.settings.name)}</h2>
+      ${hhActive()?`<span class="chip warn">🍹 Happy hour -${db.settings.hh.pct}%</span>`:''}
+      <span class="chip ${sh?'ok':'bad'}">${sh?'Shift open':'No open shift'}</span><span class="chip">${openOrders().length} open orders</span>
+      <span class="chip blue">${esc(S.user.name)} (${S.user.role})</span><span class="chip" id="clock"></span></div>
+    <main class="${['floor','order'].includes(S.view)?'fit':''}">${body}</main></section></div>`;
+  tickClock();
+  if(S.view==='kitchen')kitchenAfter();
+}
+function tickClock(){const c=$('#clock');if(c)c.textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
+setInterval(()=>{tickClock();if(S.user&&['kitchen','floor'].includes(S.view)&&!$('#modal')&&!S.edit)render()},20000);
+
+/* ----- Login ----- */
+function loginView(){
+  return`<div class="shell"><div class="login"><div class="logo">🍽</div><h1 style="margin:0;color:var(--accent)">${esc(db.settings.name)}</h1><p class="hint">Enter your 4 digit PIN</p>
+  <div class="dots">${'●'.repeat(S.pin.length)||'&nbsp;'}</div>
+  <div class="pad">${[1,2,3,4,5,6,7,8,9,'C',0,'⌫'].map(k=>`<button onclick="A.pinKey('${k}')">${k}</button>`).join('')}</div>
+  ${db.demo?`<p class="hint">Demo PINs: Manager 1234, Server 1111, Kitchen 2222</p>`:''}</div></div>`;
+}
+
+/* ----- Floor ----- */
+function tstate(t,o){
+  if(o){
+    const lines=o.items.filter(l=>!l.void);
+    if(lines.some(l=>l.state==='ready'))return{cls:'rdy',label:'Food ready'};
+    if(o.billReq)return{cls:'bill',label:'Bill requested'};
+    if(mins(o.created)>90)return{cls:'late',label:'Seated '+ago(o.created)};
+    return{cls:'occ',label:'Seated '+ago(o.created)};
+  }
+  const r=db.res.find(r=>r.tableId===t.id&&r.status==='booked'&&r.date===ymd(Date.now()));
+  if(r)return{cls:'rsv',label:'Res '+r.time};
+  return{cls:'',label:'Free'};
+}
+function tileHtml(t){
+  const o=tableOrder(t.id),st=tstate(t,o);
+  return`<div class="tile ${t.shape} ${st.cls}" style="left:${t.x}%;top:${t.y}%;width:${t.w}%;height:${t.h}%" onpointerdown="A.drag(event,'${t.id}')" onclick="A.tableClick('${t.id}')">
+    <b>${esc(t.name)}</b><small>${t.seats} seat${t.seats>1?'s':''}</small>${o?`<div><b style="font-size:14px">${money(totals(o).total)}</b></div>`:'<div></div>'}<small>${esc(st.label)}</small></div>`;
+}
+function floorView(){
+  const ready=openOrders().map(o=>({o,l:o.items.filter(l=>l.state==='ready'&&!l.void)})).filter(x=>x.l.length);
+  const today=ymd(Date.now()),res=db.res.filter(r=>r.date===today&&r.status==='booked').sort((a,b)=>a.time.localeCompare(b.time));
+  const low=db.menu.filter(i=>i.stock!==null&&i.stock<=5);
+  const take=openOrders().filter(o=>o.type==='takeaway');
+  const main=S.mode==='plan'
+    ?`<div class="planwrap"><div class="plan ${S.edit?'edit':''}" id="plan">${db.tables.map(tileHtml).join('')}</div></div>`
+    :`<div class="card"><table><tr><th>Table</th><th>Section</th><th>Seats</th><th>Status</th><th class="n">Total</th></tr>${db.tables.map(t=>{const o=tableOrder(t.id),st=tstate(t,o);return`<tr style="cursor:pointer" onclick="A.tableClick('${t.id}')"><td><b>${esc(t.name)}</b></td><td>${esc(t.section||'')}</td><td>${t.seats}</td><td>${esc(st.label)}</td><td class="n">${o?money(totals(o).total):'-'}</td></tr>`}).join('')}</table></div>`;
+  return`<div class="floor"><div style="display:flex;flex-direction:column;min-height:0;gap:10px"><div class="row" style="flex:0"><div class="seg fx"><button class="${S.mode==='plan'?'on':''}" onclick="A.mode('plan')">Plan</button><button class="${S.mode==='list'?'on':''}" onclick="A.mode('list')">List</button></div>
+    ${isMgr()?`<button class="fx ${S.edit?'on':''}" onclick="A.edit()">${S.edit?'Done editing':'Edit layout'}</button>`:''}${S.edit?`<button class="fx" onclick="A.tableForm()">+ Table</button>`:''}
+    <span></span><span class="hint fx">${S.edit?'Drag tables to reposition, click to edit':'Green = food ready, red = over 90 min, purple = bill requested, blue = reserved'}</span><button class="pri fx" onclick="A.newTake()">+ Takeaway</button></div>${main}</div>
+  <div class="sidecol"><div class="card"><h3>Ready to serve</h3>${ready.map(x=>`<div class="li"><span><b>${esc(orderName(x.o))}</b> ${x.l.map(l=>esc(l.name)).join(', ')}</span><button class="sm ok" onclick="A.goOrder('${x.o.id}')">Open</button></div>`).join('')||'<span class="hint">Nothing waiting</span>'}</div>
+  ${take.length?`<div class="card"><h3>Takeaway</h3>${take.map(o=>`<div class="li"><span>#${o.no} ${esc(o.cust||'')}</span><button class="sm" onclick="A.goOrder('${o.id}')">${money(totals(o).total)}</button></div>`).join('')}</div>`:''}
+  <div class="card"><h3>Reservations today</h3>${res.slice(0,5).map(r=>`<div class="li"><span><b>${r.time}</b> ${esc(r.name)} (${r.size})</span><button class="sm" onclick="A.seatParty('res','${r.id}')">Seat</button></div>`).join('')||'<span class="hint">None left</span>'}
+    <div class="hint" style="margin-top:6px">Waitlist: ${db.wait.length} ${db.wait.length?'party/parties':''}</div></div>
+  ${low.length?`<div class="card"><h3>Low stock</h3>${low.map(i=>`<div class="li"><span>${esc(i.name)}</span><span class="chip ${i.stock?'warn':'bad'}">${i.stock?i.stock+' left':'86'}</span></div>`).join('')}</div>`:''}</div></div>`;
+}
+
+/* ----- Order ----- */
+function itemsHtml(){
+  const q=S.search.trim().toLowerCase(),cat=S.cat||db.cats[0]?.name;
+  const items=db.menu.filter(i=>q?i.name.toLowerCase().includes(q):i.cat===cat);
+  return items.map(i=>{const out=!i.active||(i.stock!==null&&i.stock<=0),p=priceFor(i),c=catOf(i.cat).color;
+    return`<div class="item ${out?'off':''}" style="--c:${c}" onclick="A.add('${i.id}')"><b>${esc(i.name)}</b><div>${i.allergens.map(a=>`<span class="al" title="${ALG[a]}">${a}</span>`).join('')}</div>
+    <span style="display:flex;justify-content:space-between;align-items:center"><span style="color:var(--accent);font-weight:650">${p!==i.price?`<s style="color:var(--mute);font-weight:400">${money(i.price)}</s> `:''}${money(p)}</span>${out?'<span class="tag">86</span>':i.stock!==null?`<span class="chip ${i.stock<=5?'warn':''}">${i.stock} left</span>`:''}</span></div>`}).join('')||'<p class="hint">No items</p>';
+}
+function lineHtml(l){
+  const sent=l.state!=='new';
+  const acts=l.void?'':[
+    !sent?`<button class="sm" onclick="A.noteModal('${l.id}')">Note</button> <button class="sm" onclick="A.moveLine('${l.id}')">Seat/Course</button>`:'',
+    l.state==='ready'?`<button class="sm ok" onclick="A.serve('${l.id}')">Serve</button>`:'',
+    sent&&l.state!=='served'&&l.state!=='held'||l.state==='held'?`<button class="sm bad" onclick="A.voidModal('${l.id}')">Void</button>`:'',
+    l.state==='served'?`<button class="sm bad" onclick="A.voidModal('${l.id}')">Void</button>`:''].join(' ');
+  return`<div class="line" style="${l.void?'opacity:.4;text-decoration:line-through':''}"><div class="r"><div><b>${esc(l.name)}</b> <span class="tag ${l.void?'void':l.state}">${l.void?'void':l.state}</span>${l.seat?` <span class="al">S${l.seat}</span>`:''}${l.paid?' <span class="tag paid">paid</span>':''}
+    ${l.mods.length?`<small>+ ${l.mods.map(m=>esc(m.name)).join(', ')}</small>`:''}${l.note?`<small>Note: ${esc(l.note)}</small>`:''}</div>
+    <div class="qty">${!sent&&!l.void?`<button onclick="A.qty('${l.id}',-1)">-</button>${l.qty}<button onclick="A.qty('${l.id}',1)">+</button>`:`<span>x${l.qty}</span>`}<b style="min-width:64px;text-align:right">${money(lineTotal(l))}</b></div></div>
+    <div style="margin-top:4px">${acts}</div></div>`;
+}
+function ticketHtml(o){
+  const t=totals(o),live=o.items.filter(l=>true);
+  const unsent=o.items.filter(i=>i.state==='new'&&!i.void).length;
+  const held=c=>o.items.filter(l=>l.state==='held'&&l.course===c&&!l.void).length;
+  const groups=[1,2,3].map(c=>{const ls=o.items.filter(l=>l.course===c);if(!ls.length)return'';
+    return`<div class="chead"><span>Course ${c}</span>${held(c)?`<button class="sm pri" onclick="A.fire(${c})">Fire course ${c}</button>`:''}</div>${ls.map(lineHtml).join('')}`}).join('');
+  const seats=o.type==='dine'?`<div class="seatbar"><span class="hint">Seat</span><button class="${S.seat===0?'on':''}" onclick="A.setSeat(0)">Table</button>${Array.from({length:Math.min(o.guests||1,12)},(_,i)=>`<button class="${S.seat===i+1?'on':''}" onclick="A.setSeat(${i+1})">${i+1}</button>`).join('')}
+    <span class="hint" style="margin-left:8px">Course</span>${[1,2,3].map(c=>`<button class="${S.course===c?'on':''}" onclick="A.setCourse(${c})">${c}</button>`).join('')}</div>`:'';
+  return`<div class="row" style="flex:0"><div><b style="font-size:17px">${esc(orderName(o))}</b> <span class="hint">Order #${o.no}</span><br><span class="hint">${o.type==='dine'?o.guests+' guests, ':''}${esc(o.server)}, ${ago(o.created)}</span></div>
+    <div class="fx">${o.type==='dine'?`<button class="sm" onclick="A.moveTable()">Move table</button> `:''}<button class="sm ${o.billReq?'on':''}" onclick="A.billReq()">Bill req.</button></div></div>${seats}
+    <div class="lines">${groups||'<p class="hint">Tap items to add. Seat and course selections apply to new items.</p>'}</div>
+    <div class="tot"><div><span>Subtotal</span><span>${money(t.sub)}</span></div>${t.disc?`<div><span>Discount${o.discount.reason?' ('+esc(o.discount.reason)+')':''}</span><span>-${money(t.disc)}</span></div>`:''}
+    ${t.service?`<div><span>Service ${db.settings.service}%</span><span>${money(t.service)}</span></div>`:''}<div><span>Tax ${db.settings.tax}%</span><span>${money(t.tax)}</span></div>
+    <div class="g"><span>Total</span><span>${money(t.total)}</span></div>${t.paid?`<div><span>Paid</span><span>${money(t.paid)}</span></div><div><span>Due</span><span>${money(t.due)}</span></div>`:''}</div>
+    <div class="actions"><button class="pri" onclick="A.send()" ${unsent?'':'disabled'}>Send ${unsent?`(${unsent})`:''}</button><button class="ok" onclick="A.payModal()" ${o.items.some(i=>!i.void)?'':'disabled'}>Pay ${money(t.due)}</button>
+    <button onclick="A.discModal()">Discount</button><button onclick="A.preBill()">Print bill</button><button class="bad" onclick="A.voidOrder()">${o.items.length?'Void order':'Cancel order'}</button><button onclick="A.go('floor')">Back</button></div>`;
+}
+function orderView(){
+  const o=ord(S.orderId);
+  if(!o||o.status!=='open')return`<p>No order selected. Pick a table on the <a href="#" onclick="A.go('floor');return false" style="color:var(--accent)">Floor</a>.</p>`;
+  const cat=S.cat||db.cats[0]?.name;
+  return`<div class="order"><div class="panel"><input id="srch" placeholder="Search menu (press / to focus)" value="${esc(S.search)}" oninput="A.search(this.value)">
+    <div class="cats">${db.cats.map(c=>`<button style="--c:${c.color}" class="${c.name===cat&&!S.search?'on':''}" onclick="A.pickCat('${esc(c.name)}')">${esc(c.name)}</button>`).join('')}</div>
+    <div class="grid items" id="items">${itemsHtml()}</div></div><div class="panel" id="ticket">${ticketHtml(o)}</div></div>`;
+}
+
+/* ----- Kitchen ----- */
+function kitchenLines(o,states){return o.items.filter(l=>!l.void&&states.includes(l.state)&&(S.station==='All'||l.station===S.station))}
+function kitchenView(){
+  const stations=['All',...new Set(db.cats.map(c=>c.station))];
+  const tix=openOrders().map(o=>({o,ls:kitchenLines(o,['sent'])})).filter(x=>x.ls.length).sort((a,b)=>Math.min(...a.ls.map(l=>l.sentAt))-Math.min(...b.ls.map(l=>l.sentAt)));
+  const allday={};tix.forEach(x=>x.ls.forEach(l=>allday[l.name]=(allday[l.name]||0)+l.qty));
+  const head=`<div class="row" style="margin-bottom:12px"><div class="seg fx">${stations.map(s=>`<button class="${S.station===s?'on':''}" onclick="A.station('${s}')">${s}</button>`).join('')}</div><span></span>
+    <div class="seg fx"><button class="${S.kview==='live'?'on':''}" onclick="A.kview('live')">Live (${tix.length})</button><button class="${S.kview==='recall'?'on':''}" onclick="A.kview('recall')">Recall</button></div></div>`;
+  if(S.kview==='recall'){
+    const rc=openOrders().map(o=>({o,ls:kitchenLines(o,['ready']).filter(l=>Date.now()-(l.readyAt||0)<30*60000||true)})).filter(x=>x.ls.length);
+    return head+`<div class="grid kds">${rc.map(x=>`<div class="tick"><b>${esc(orderName(x.o))}</b>${x.ls.map(l=>`<div class="li"><span>${l.qty}x ${esc(l.name)}</span><button class="sm" onclick="A.kRecall('${x.o.id}','${l.id}')">Recall</button></div>`).join('')}</div>`).join('')||'<p class="hint">No recently completed items</p>'}</div>`;
+  }
+  if(!tix.length)return head+`<div class="card" style="text-align:center;padding:50px"><div style="font-size:48px">🎉</div><h2>All caught up</h2><p class="hint">New tickets appear here instantly, even from another tab or screen.</p></div>`;
+  return head+`<div class="card" style="margin-bottom:12px"><h3>All day (${S.station})</h3><div class="quick">${Object.entries(allday).sort((a,b)=>b[1]-a[1]).map(([n,q])=>`<span class="chip" style="font-size:14px"><b>${q}</b> ${esc(n)}</span>`).join('')}</div></div>
+  <div class="grid kds">${tix.map(({o,ls})=>{const since=Math.min(...ls.map(l=>l.sentAt)),m=(Date.now()-since)/60000,s=db.settings;
+    return`<div class="tick ${m>s.late?'late':m>s.warn?'mid':''}"><div class="row"><b style="font-size:17px">${esc(orderName(o))}</b><span class="chip ${m>s.late?'bad':m>s.warn?'warn':''}" style="justify-content:center">${ago(since)}</span></div><div class="hint">${esc(o.server)}${o.cust?', '+esc(o.cust):''}</div>
+    ${ls.map(l=>`<div class="line"><div class="r"><div><b style="font-size:16px">${l.qty}x ${esc(l.name)}</b> ${l.course>1?`<span class="tag held">C${l.course}</span>`:''}${l.seat?`<span class="al">S${l.seat}</span>`:''}${l.mods.length?`<small>${l.mods.map(m=>esc(m.name)).join(', ')}</small>`:''}${l.note?`<small style="color:var(--warn)">Note: ${esc(l.note)}</small>`:''}</div>
+    <button class="sm ok" onclick="A.kDone('${o.id}','${l.id}')">Done</button></div></div>`).join('')}
+    <button class="pri" style="width:100%;margin-top:8px" onclick="A.kBump('${o.id}')">Bump ticket</button></div>`}).join('')}</div>`;
+}
+function kitchenAfter(){
+  const n=openOrders().reduce((a,o)=>a+kitchenLines(o,['sent']).length,0);
+  if(S.lastSent!==null&&n>S.lastSent)beep();
+  S.lastSent=n;
+}
+
+/* ----- Book ----- */
+function bookView(){
+  const today=ymd(Date.now()),rs=db.res.filter(r=>r.date>=today).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  return`<div class="grid" style="grid-template-columns:2fr 1fr;align-items:start">
+  <div class="card"><h3>Reservations</h3><table><tr><th>When</th><th>Guest</th><th>Party</th><th>Table</th><th>Notes</th><th></th></tr>
+  ${rs.map(r=>`<tr style="${r.status!=='booked'?'opacity:.5':''}"><td>${r.date===today?'Today':r.date} <b>${r.time}</b></td><td>${esc(r.name)}<br><span class="hint">${esc(r.phone)}</span></td><td>${r.size}</td><td>${esc(tbl(r.tableId)?.name||'-')}</td><td>${esc(r.note)}</td>
+  <td class="n">${r.status==='booked'?`<button class="sm ok" onclick="A.seatParty('res','${r.id}')">Seat</button> <button class="sm" onclick="A.resSet('${r.id}','noshow')">No show</button> <button class="sm bad" onclick="A.resSet('${r.id}','cancelled')">Cancel</button>`:`<span class="tag">${r.status}</span>`}</td></tr>`).join('')||'<tr><td colspan=6 class="hint">No upcoming reservations</td></tr>'}</table></div>
+  <div class="sidecol"><div class="card"><h3>New reservation</h3><label>Name</label><input id="rn"><div class="row"><div><label>Party</label><input id="rs" type="number" min="1" value="2"></div><div><label>Time</label><input id="rt" type="time" value="19:00"></div></div>
+  <label>Date</label><input id="rd" type="date" value="${today}"><label>Phone</label><input id="rp"><label>Notes</label><input id="rm" placeholder="Allergies, occasion"><button class="pri" style="width:100%;margin-top:12px" onclick="A.addRes()">Add reservation</button></div>
+  <div class="card"><h3>Waitlist</h3>${db.wait.map(w=>`<div class="li"><span><b>${esc(w.name)}</b> (${w.size})<br><span class="hint">waiting ${ago(w.added)}, quoted ${w.quote}m</span></span><span><button class="sm ok" onclick="A.seatParty('wait','${w.id}')">Seat</button> <button class="sm bad" onclick="A.waitDel('${w.id}')">x</button></span></div>`).join('')||'<span class="hint">Nobody waiting</span>'}
+  <div class="row" style="margin-top:10px"><input id="wn" placeholder="Name"><input id="ws" type="number" value="2" style="max-width:60px"><input id="wq" type="number" value="20" style="max-width:60px" title="Quote minutes"></div><button style="width:100%;margin-top:6px" onclick="A.addWait()">Add to waitlist</button></div></div></div>`;
+}
+
+/* ----- Bills ----- */
+function billsView(){
+  const q=(S.msearch||'').toLowerCase();
+  const rows=db.orders.filter(o=>o.status!=='open').sort((a,b)=>b.closed-a.closed).filter(o=>!q||String(o.no).includes(q)||o.server.toLowerCase().includes(q)).slice(0,120);
+  return`<div class="row" style="margin-bottom:12px"><h2>Closed bills</h2><input placeholder="Search order # or server" value="${esc(S.msearch||'')}" oninput="S.msearch=this.value;A.rows()" style="max-width:300px"></div>
+  <div class="card"><table><thead><tr><th>#</th><th>Closed</th><th>Table</th><th>Server</th><th>Status</th><th class="n">Total</th><th></th></tr></thead><tbody id="rows">${billRows(rows)}</tbody></table></div>`;
+}
+function billRows(rows){return rows.map(o=>`<tr><td>${o.no}</td><td>${new Date(o.closed).toLocaleString()}</td><td>${esc(orderName(o))}</td><td>${esc(o.server)}</td><td><span class="tag ${o.refund?'refunded':o.status}">${o.refund?'refunded':o.status}</span></td><td class="n">${money(totals(o).total)}</td>
+  <td class="n"><button class="sm" onclick="A.receipt('${o.id}')">View</button>${isMgr()&&o.status==='paid'&&!o.refund?` <button class="sm bad" onclick="A.refundModal('${o.id}')">Refund</button>`:''}</td></tr>`).join('')||'<tr><td colspan=7 class="hint">No bills</td></tr>'}
+
+/* ----- Reports ----- */
+function repData(a,b){
+  const os=db.orders.filter(o=>o.status==='paid'&&!o.refund&&o.closed>=a&&o.closed<b);
+  const r={os,rev:0,net:0,tax:0,tips:0,disc:0,cost:0,covers:0,cat:{},item:{},pay:{},hour:Array(24).fill(0),srv:{}};
+  os.forEach(o=>{const t=totals(o);r.rev+=t.total;r.net+=t.sub-t.disc;r.tax+=t.tax;r.tips+=t.tips;r.disc+=t.disc;r.covers+=o.guests||1;
+    o.items.filter(l=>!l.void).forEach(l=>{const v=lineTotal(l);r.cat[l.cat]=(r.cat[l.cat]||0)+v;const e=r.item[l.name]||(r.item[l.name]={q:0,v:0});e.q+=l.qty;e.v+=v;const it=db.menu.find(m=>m.id===l.itemId);r.cost+=(it?.cost||0)*l.qty});
+    o.payments.forEach(p=>r.pay[p.method]=(r.pay[p.method]||0)+p.amount);
+    r.hour[new Date(o.closed).getHours()]+=t.total;
+    const s=r.srv[o.server]||(r.srv[o.server]={n:0,v:0,tips:0});s.n++;s.v+=t.total;s.tips+=t.tips});
+  return r;
+}
+function bars(vals,labels,fmt,h=150){
+  const w=620,pad=10,max=Math.max(1,...vals),bw=(w-pad*2)/vals.length,step=Math.ceil(vals.length/12);
+  return`<svg viewBox="0 0 ${w} ${h+24}" class="chart" role="img">${[.25,.5,.75,1].map(f=>`<line x1="${pad}" x2="${w-pad}" y1="${h-h*f}" y2="${h-h*f}" stroke="var(--line)" stroke-dasharray="3 4"/>`).join('')}
+  ${vals.map((v,i)=>{const bh=v/max*h;return`<rect x="${pad+i*bw+bw*.12}" y="${h-bh}" width="${bw*.76}" height="${Math.max(bh,0)}" rx="3" fill="var(--accent)"><title>${labels[i]}: ${fmt(v)}</title></rect>`}).join('')}
+  ${labels.map((l,i)=>i%step===0?`<text x="${pad+i*bw+bw/2}" y="${h+16}" text-anchor="middle" fill="var(--mute)" font-size="15">${l}</text>`:'').join('')}</svg>`;
+}
+function reportsView(){
+  const sd=dayStart(),spans={today:[sd,sd+864e5],week:[sd-6*864e5,sd+864e5],month:[sd-29*864e5,sd+864e5],all:[0,sd+864e5]};
+  const [a,b]=spans[S.range],cur=repData(a,b),prev=S.range==='all'?null:repData(a-(b-a),a);
+  const delta=(c,p)=>{if(!prev||!p)return'';const d=(c-p)/p*100;return`<i class="${d>=0?'up':'down'}">${d>=0?'▲':'▼'} ${Math.abs(d).toFixed(0)}% vs prev period</i>`};
+  const kpi=(l,v,d='')=>`<div class="card stat"><span>${l}</span><b>${v}</b>${d}</div>`;
+  const margin=cur.net?(cur.net-cur.cost)/cur.net*100:0;
+  const days=Array.from({length:30},(_,i)=>sd-(29-i)*864e5),dv=days.map(d=>repData(d,d+864e5).rev);
+  const hrs=[...Array(14)].map((_,i)=>i+10);
+  const maxC=Math.max(1,...Object.values(cur.cat)),top=Object.entries(cur.item).sort((x,y)=>y[1].q-x[1].q).slice(0,8);
+  const refunds=db.orders.filter(o=>o.refund&&o.refund.at>=a&&o.refund.at<b),voids=db.audit.filter(x=>x.t>=a&&x.t<b&&/Voided/.test(x.text)).length;
+  return`<div class="row" style="margin-bottom:12px"><h2>Reports</h2><span></span><div class="seg fx">${[['today','Today'],['week','7 days'],['month','30 days'],['all','All time']].map(([k,l])=>`<button class="${S.range===k?'on':''}" onclick="A.range('${k}')">${l}</button>`).join('')}</div><button class="fx" onclick="A.exportCsv()">Export CSV</button></div>
+  <div class="grid stats">${kpi('Revenue',money(cur.rev),delta(cur.rev,prev?.rev))}${kpi('Orders',cur.os.length,delta(cur.os.length,prev?.os.length))}${kpi('Average check',money(cur.os.length?cur.rev/cur.os.length:0))}${kpi('Covers',cur.covers)}${kpi('Gross margin',margin.toFixed(1)+'%','<i class="hint">after food and drink cost</i>')}${kpi('Tips',money(cur.tips))}${kpi('Discounts',money(cur.disc))}${kpi('Refunds / voids',refunds.length+' / '+voids)}</div>
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(360px,1fr));margin-top:12px">
+  <div class="card"><h3>Sales by hour</h3>${bars(hrs.map(h=>cur.hour[h]),hrs.map(h=>h+'h'),money)}</div>
+  <div class="card"><h3>Last 30 days</h3>${bars(dv,days.map(d=>new Date(d).getDate()),money)}</div>
+  <div class="card"><h3>Sales by category</h3>${Object.entries(cur.cat).sort((x,y)=>y[1]-x[1]).map(([c,v])=>`<div style="margin:9px 0"><div class="row"><span>${esc(c)}</span><span style="text-align:right">${money(v)}</span></div><div class="bar" style="width:${v/maxC*100}%;background:${catOf(c).color}"></div></div>`).join('')||'<p class="hint">No sales</p>'}</div>
+  <div class="card"><h3>Top items</h3><table>${top.map(([n,e],i)=>`<tr><td>${i+1}. ${esc(n)}</td><td class="n">${e.q}</td><td class="n">${money(e.v)}</td></tr>`).join('')||'<tr><td class="hint">No sales</td></tr>'}</table></div>
+  <div class="card"><h3>Server performance</h3><table><tr><th>Server</th><th class="n">Orders</th><th class="n">Sales</th><th class="n">Avg</th><th class="n">Tips</th></tr>${Object.entries(cur.srv).map(([n,s])=>`<tr><td>${esc(n)}</td><td class="n">${s.n}</td><td class="n">${money(s.v)}</td><td class="n">${money(s.v/s.n)}</td><td class="n">${money(s.tips)}</td></tr>`).join('')||'<tr><td class="hint">No sales</td></tr>'}</table></div>
+  <div class="card"><h3>Payment mix</h3>${Object.entries(cur.pay).map(([m,v])=>`<div class="li"><span style="text-transform:capitalize">${m}</span><b>${money(v)}</b></div>`).join('')||'<p class="hint">No payments</p>'}<div class="li"><span>Tax collected</span><b>${money(cur.tax)}</b></div></div></div>`;
+}
+
+/* ----- Cash ----- */
+function shiftStats(sh){
+  const end=sh.closedAt||Date.now(),ps=[];let sales=0,card=0,cash=0,cashTips=0,other=0,tips=0,disc=0,n=0;
+  db.orders.forEach(o=>{o.payments.forEach(p=>{if(p.at>=sh.openedAt&&p.at<=end&&!(o.refund&&o.refund.method==='card')){sales+=p.amount;tips+=p.tip||0;if(p.method==='cash'){cash+=p.amount;cashTips+=p.tip||0}else if(p.method==='card')card+=p.amount;else other+=p.amount}});
+    if(o.status==='paid'&&o.closed>=sh.openedAt&&o.closed<=end){n++;disc+=totals(o).disc}});
+  const inn=sh.tx.filter(t=>t.type==='in').reduce((a,t)=>a+t.amount,0),out=sh.tx.filter(t=>t.type==='out').reduce((a,t)=>a+t.amount,0);
+  const refCash=db.orders.filter(o=>o.refund&&o.refund.at>=sh.openedAt&&o.refund.at<=end&&o.refund.method==='cash').reduce((a,o)=>a+o.refund.amount,0);
+  return{sales:round(sales),card:round(card),cash:round(cash),cashTips:round(cashTips),other:round(other),tips:round(tips),disc:round(disc),n,inn,out,refCash,expected:round(sh.float+cash+cashTips+inn-out-refCash)};
+}
+function zHtml(sh){
+  const s=shiftStats(sh);
+  return`<div class="receipt"><div style="text-align:center"><b>${esc(db.settings.name)}</b><br>${sh.closedAt?'Z REPORT':'X REPORT (shift open)'}</div><hr>
+  <div class="l"><span>Opened</span><span>${new Date(sh.openedAt).toLocaleString()}</span></div>${sh.closedAt?`<div class="l"><span>Closed</span><span>${new Date(sh.closedAt).toLocaleString()}</span></div>`:''}<div class="l"><span>By</span><span>${esc(sh.openedBy)}</span></div><hr>
+  <div class="l"><span>Orders</span><span>${s.n}</span></div><div class="l"><span>Card</span><span>${money(s.card)}</span></div><div class="l"><span>Cash</span><span>${money(s.cash)}</span></div><div class="l"><span>Other</span><span>${money(s.other)}</span></div><div class="l"><span>Tips</span><span>${money(s.tips)}</span></div><div class="l"><span>Discounts</span><span>${money(s.disc)}</span></div><hr>
+  <div class="l"><span>Opening float</span><span>${money(sh.float)}</span></div><div class="l"><span>Cash sales + tips</span><span>${money(s.cash+s.cashTips)}</span></div><div class="l"><span>Paid in</span><span>${money(s.inn)}</span></div><div class="l"><span>Paid out</span><span>-${money(s.out)}</span></div>${s.refCash?`<div class="l"><span>Cash refunds</span><span>-${money(s.refCash)}</span></div>`:''}
+  <div class="l"><b>Expected cash</b><b>${money(s.expected)}</b></div>${sh.closedAt?`<div class="l"><span>Counted</span><span>${money(sh.counted)}</span></div><div class="l"><b>Variance</b><b>${money(round(sh.counted-s.expected))}</b></div>`:''}</div>`;
+}
+function cashView(){
+  const sh=currentShift(),hist=db.shifts.filter(s=>s.closedAt).sort((a,b)=>b.closedAt-a.closedAt).slice(0,15);
+  return`<div class="row" style="margin-bottom:12px"><h2>Cash drawer</h2></div><div class="grid" style="grid-template-columns:1fr 1fr;align-items:start">
+  <div class="card">${sh?`<h3>Current shift</h3>${zHtml(sh)}<div class="row" style="margin-top:12px"><button onclick="A.cashTx('in')">Paid in</button><button onclick="A.cashTx('out')">Paid out</button><button class="pri" onclick="A.closeShiftModal()">Close shift</button></div>
+    ${sh.tx.length?`<h3 style="margin-top:14px">Drawer movements</h3>${sh.tx.map(t=>`<div class="li"><span>${fmtT(t.at)} ${esc(t.reason)} <span class="hint">${esc(t.by)}</span></span><b class="${t.type==='in'?'up':'down'}">${t.type==='in'?'+':'-'}${money(t.amount)}</b></div>`).join('')}`:''}`
+    :`<h3>No open shift</h3><p class="hint">Open a shift with a starting float to track cash and produce a Z report.</p><label>Opening float</label><input id="fl" type="number" value="200" step="0.01"><button class="pri" style="width:100%;margin-top:12px" onclick="A.openShift()">Open shift</button>`}</div>
+  <div class="card"><h3>Previous shifts</h3>${hist.map(s=>{const st=shiftStats(s);return`<div class="li"><span>${new Date(s.openedAt).toLocaleDateString()} by ${esc(s.openedBy)}<br><span class="hint">Sales ${money(st.sales)}, variance ${money(round(s.counted-st.expected))}</span></span><button class="sm" onclick="A.zView('${s.id}')">Z report</button></div>`}).join('')||'<span class="hint">No closed shifts yet</span>'}</div></div>`;
+}
+
+/* ----- Admin ----- */
+function adminView(){
+  const tabs=[['menu','Menu'],['cats','Categories'],['tables','Tables'],['staff','Staff'],['settings','Settings'],['audit','Audit log']];
+  let b='';
+  if(S.tab==='menu'){const q=S.msearch.toLowerCase();
+    b=`<div class="row" style="margin-bottom:8px"><input placeholder="Filter items" value="${esc(S.msearch)}" oninput="S.msearch=this.value;A.menuRows()"><button class="pri fx" onclick="A.itemModal()">+ Add item</button></div><div class="card"><table><thead><tr><th>Name</th><th>Category</th><th class="n">Price</th><th class="n">Cost</th><th class="n">Margin</th><th class="n">Stock</th><th>On menu</th><th></th></tr></thead><tbody id="mrows">${menuRows()}</tbody></table></div>`}
+  if(S.tab==='cats')b=`<div class="card"><div class="row"><input id="nc" placeholder="Category name"><input id="ns" placeholder="Station (Kitchen, Grill, Bar...)" value="Kitchen"><input id="ncc" type="color" value="#ff8a3d" style="max-width:70px;padding:2px"><button class="pri fx" onclick="A.addCat()">Add</button></div></div>
+    <div class="card" style="margin-top:12px"><table>${db.cats.map((c,i)=>`<tr><td><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${c.color}"></span> ${esc(c.name)}</td><td>${esc(c.station)}</td><td class="n"><button class="sm" onclick="A.moveCat(${i},-1)">↑</button> <button class="sm" onclick="A.moveCat(${i},1)">↓</button> <button class="sm bad" onclick="A.delCat(${i})">Delete</button></td></tr>`).join('')}</table></div>`;
+  if(S.tab==='tables')b=`<p class="hint">Tables are arranged visually on the Floor tab with Edit layout.</p><div class="card"><table>${db.tables.map(t=>`<tr><td><b>${esc(t.name)}</b></td><td>${esc(t.section||'')}</td><td>${t.seats} seats</td><td class="n"><button class="sm" onclick="A.tableForm('${t.id}')">Edit</button></td></tr>`).join('')}</table></div><button class="pri" style="margin-top:12px" onclick="A.tableForm()">+ Add table</button>`;
+  if(S.tab==='staff'){
+    const wk=Date.now()-7*864e5,hrs=id=>round(db.clock.filter(c=>c.staffId===id&&c.in>=wk).reduce((a,c)=>a+((c.out||Date.now())-c.in)/36e5,0));
+    b=`<div class="card"><div class="row"><input id="sn" placeholder="Name"><input id="sp4" placeholder="4 digit PIN" maxlength="4"><select id="sr"><option>server</option><option>kitchen</option><option>manager</option></select><input id="srt" type="number" placeholder="Hourly rate" value="15"><button class="pri fx" onclick="A.addStaff()">Add</button></div></div>
+    <div class="card" style="margin-top:12px"><table><tr><th>Name</th><th>Role</th><th>PIN</th><th class="n">Rate</th><th class="n">Hours (7d)</th><th class="n">Labor cost</th><th>Status</th><th></th></tr>${db.staff.map(s=>{const on=db.clock.find(c=>c.staffId===s.id&&!c.out),h=hrs(s.id);return`<tr><td>${esc(s.name)}</td><td>${s.role}</td><td>${esc(s.pin)}</td><td class="n">${money(s.rate||0)}</td><td class="n">${h}</td><td class="n">${money(h*(s.rate||0))}</td><td><span class="chip ${on?'ok':''}">${on?'On shift':'Off'}</span></td><td class="n"><button class="sm bad" onclick="A.delStaff('${s.id}')">Delete</button></td></tr>`}).join('')}</table></div>`;}
+  if(S.tab==='settings'){const s=db.settings,h=s.hh;
+    b=`<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr));align-items:start"><div class="card"><h3>Venue</h3><label>Name</label><input id="s1" value="${esc(s.name)}"><label>Address</label><input id="s2" value="${esc(s.address)}">
+    <div class="row"><div><label>Tax %</label><input id="s3" type="number" step="0.1" value="${s.tax}"></div><div><label>Service %</label><input id="s4" type="number" step="0.1" value="${s.service}"></div><div><label>Currency</label><input id="s5" value="${esc(s.currency)}"></div></div>
+    <label>Tip presets % (comma separated)</label><input id="s6" value="${s.tips.join(', ')}"><div class="row"><div><label>Kitchen warn (min)</label><input id="s7" type="number" value="${s.warn}"></div><div><label>Kitchen late (min)</label><input id="s8" type="number" value="${s.late}"></div></div>
+    <label style="display:flex;gap:8px;align-items:center;color:var(--text)"><input id="s9" type="checkbox" style="width:auto" ${s.sound?'checked':''}> Kitchen new ticket sound</label></div>
+    <div class="card"><h3>Happy hour</h3><label style="display:flex;gap:8px;align-items:center;color:var(--text)"><input id="h1" type="checkbox" style="width:auto" ${h.on?'checked':''}> Enabled (prices adjust automatically)</label><div class="row"><div><label>Start</label><input id="h2" type="time" value="${h.start}"></div><div><label>End</label><input id="h3" type="time" value="${h.end}"></div><div><label>Discount %</label><input id="h4" type="number" value="${h.pct}"></div></div>
+    <label>Categories</label>${db.cats.map((c,i)=>`<label style="display:inline-flex;gap:5px;align-items:center;margin-right:12px;color:var(--text)"><input class="hc" type="checkbox" style="width:auto" value="${esc(c.name)}" ${h.cats.includes(c.name)?'checked':''}> ${esc(c.name)}</label>`).join('')}
+    <h3 style="margin-top:20px">Data</h3><div class="quick"><button onclick="A.backup()">Export backup</button><button onclick="$('#imp').click()">Import backup</button><input id="imp" type="file" accept=".json" style="display:none" onchange="A.restore(this)"><button class="bad" onclick="A.resetAll()">Reset to demo data</button></div></div></div>
+    <button class="pri" style="margin-top:14px" onclick="A.saveSettings()">Save settings</button>`}
+  if(S.tab==='audit')b=`<div class="card"><table>${db.audit.slice(0,100).map(a=>`<tr><td style="white-space:nowrap">${new Date(a.t).toLocaleString()}</td><td>${esc(a.user)}</td><td>${esc(a.text)}</td></tr>`).join('')||'<tr><td class="hint">Empty</td></tr>'}</table></div>`;
+  return`<div class="seg" style="margin-bottom:14px;max-width:760px">${tabs.map(([k,l])=>`<button class="${S.tab===k?'on':''}" onclick="A.tab('${k}')">${l}</button>`).join('')}</div>${b}`;
+}
+function menuRows(){
+  const q=S.msearch.toLowerCase();
+  return db.menu.filter(i=>!q||i.name.toLowerCase().includes(q)||i.cat.toLowerCase().includes(q)).map(i=>{const mg=i.price?(i.price-(i.cost||0))/i.price*100:0;
+    return`<tr><td>${esc(i.name)}${i.mods.length?` <span class="tag">${i.mods.length} mods</span>`:''} ${i.allergens.map(a=>`<span class="al">${a}</span>`).join('')}</td><td>${esc(i.cat)}</td><td class="n">${money(i.price)}</td><td class="n">${money(i.cost||0)}</td><td class="n ${mg<60?'down':'up'}">${mg.toFixed(0)}%</td><td class="n">${i.stock??'-'}</td>
+    <td><input type="checkbox" style="width:auto" ${i.active?'checked':''} onchange="A.toggleItem('${i.id}',this.checked)"></td><td class="n"><button class="sm" onclick="A.itemModal('${i.id}')">Edit</button></td></tr>`}).join('');
+}
+
+/* ===================== RECEIPT ===================== */
+function receiptHtml(o,pre){
+  const t=totals(o);
+  return`<div class="receipt"><div style="text-align:center"><b>${esc(db.settings.name)}</b><br>${esc(db.settings.address)}<br>${pre?'*** PRE-BILL ***':o.refund?'*** REFUNDED ***':'RECEIPT'}</div><hr>
+  <div>Order #${o.no}, ${esc(orderName(o))}</div><div>${new Date(o.closed||Date.now()).toLocaleString()}</div><div>Server: ${esc(o.server)}</div><hr>
+  ${o.items.filter(l=>!l.void).map(l=>`<div class="l"><span>${l.qty}x ${esc(l.name)}</span><span>${money(lineTotal(l))}</span></div>${l.mods.map(m=>`<div style="padding-left:14px">+ ${esc(m.name)}</div>`).join('')}`).join('')}<hr>
+  <div class="l"><span>Subtotal</span><span>${money(t.sub)}</span></div>${t.disc?`<div class="l"><span>Discount</span><span>-${money(t.disc)}</span></div>`:''}${t.service?`<div class="l"><span>Service</span><span>${money(t.service)}</span></div>`:''}
+  <div class="l"><span>Tax (${db.settings.tax}%)</span><span>${money(t.tax)}</span></div><div class="l"><b>TOTAL</b><b>${money(t.total)}</b></div>
+  ${o.payments.map(p=>`<div class="l"><span>${p.method.toUpperCase()}</span><span>${money(p.amount)}</span></div>${p.tip?`<div class="l"><span>Tip</span><span>${money(p.tip)}</span></div>`:''}${p.change?`<div class="l"><span>Change</span><span>${money(p.change)}</span></div>`:''}`).join('')}<hr><div style="text-align:center">Thank you for dining with us!</div></div>`;
+}
+
+/* ===================== ACTIONS ===================== */
+const A={
+  shut,
+  go(v){S.view=v;if(v==='kitchen')S.lastSent=null;render()},
+  goOrder(id){S.orderId=id;S.seat=0;S.course=1;S.view='order';render()},
+  theme(){db.settings.theme=db.settings.theme==='dark'?'light':'dark';save();render()},
+  logout(){S.user=null;S.pin='';render()},
+  pinKey(k){
+    if(k==='C')S.pin='';else if(k==='⌫')S.pin=S.pin.slice(0,-1);else S.pin+=k;
+    if(S.pin.length===4){const u=db.staff.find(s=>s.pin===S.pin);S.pin='';if(u){S.user=u;S.view=u.role==='kitchen'?'kitchen':'floor';log('Signed in')}else toast('Invalid PIN',true)}
+    render();
+  },
+  clock(){const c=db.clock.find(c=>c.staffId===S.user.id&&!c.out);if(c){c.out=Date.now();toast('Clocked out')}else{db.clock.push({id:uid(),staffId:S.user.id,in:Date.now()});toast('Clocked in')}save();render()},
+  /* floor */
+  mode(m){S.mode=m;render()},edit(){S.edit=!S.edit;render()},
+  drag(e,id){
+    if(!S.edit)return;const el=e.currentTarget,plan=$('#plan'),r=plan.getBoundingClientRect(),t=tbl(id);let moved=false;S.justDragged=false;
+    const mv=ev=>{moved=true;t.x=clamp(round((ev.clientX-r.left)/r.width*100-t.w/2),0,100-t.w);t.y=clamp(round((ev.clientY-r.top)/r.height*100-t.h/2),0,100-t.h);el.style.left=t.x+'%';el.style.top=t.y+'%'};
+    const up=()=>{document.removeEventListener('pointermove',mv);document.removeEventListener('pointerup',up);if(moved){S.justDragged=true;save();setTimeout(()=>S.justDragged=false,50)}};
+    document.addEventListener('pointermove',mv);document.addEventListener('pointerup',up);
+  },
+  tableClick(id){
+    if(S.edit){if(!S.justDragged)A.tableForm(id);return}
+    const o=tableOrder(id);if(o){A.goOrder(o.id);return}
+    const t=tbl(id),r=db.res.find(r=>r.tableId===id&&r.status==='booked'&&r.date===ymd(Date.now()));
+    modal(`<h3>Open ${esc(t.name)}</h3>${r?`<p class="hint">Reserved: ${esc(r.name)} at ${r.time}</p>`:''}<label>Guests</label><input id="g" type="number" min="1" value="${r?r.size:Math.min(t.seats,2)}"><div class="row" style="margin-top:14px">${cancelBtn}<button class="pri" onclick="A.seat('${id}',${r?`'${r.id}'`:'null'})">Start order</button></div>`);
+  },
+  seat(tid,rid){const g=+$('#g').value||1,o=A.mk(tid,'dine',g);if(rid){const r=db.res.find(x=>x.id===rid);r.status='seated'}save();shut();A.goOrder(o.id)},
+  mk(tid,type,guests){const o={id:uid(),no:db.seq++,tableId:tid,type,server:S.user.name,status:'open',items:[],discount:null,payments:[],created:Date.now(),guests,fired:1};db.orders.push(o);save();return o},
+  newTake(){modal(`<h3>New takeaway</h3><label>Customer name</label><input id="cn"><div class="row" style="margin-top:14px">${cancelBtn}<button class="pri" onclick="A.takeGo()">Start</button></div>`)},
+  takeGo(){const o=A.mk(null,'takeaway',1);o.cust=$('#cn').value.trim();save();shut();A.goOrder(o.id)},
+  tableForm(id){
+    const t=id?tbl(id):{name:'T'+(db.tables.length+1),seats:4,shape:'sq',w:13,h:22,section:'Main'};
+    modal(`<h3>${id?'Edit':'New'} table</h3><div class="row"><div><label>Name</label><input id="tn" value="${esc(t.name)}"></div><div><label>Seats</label><input id="ts" type="number" min="1" value="${t.seats}"></div></div>
+    <div class="row"><div><label>Shape</label><select id="tsh"><option value="sq" ${t.shape==='sq'?'selected':''}>Square</option><option value="round" ${t.shape==='round'?'selected':''}>Round</option></select></div><div><label>Section</label><input id="tse" value="${esc(t.section||'')}"></div></div>
+    <div class="row"><div><label>Width %</label><input id="tw" type="number" value="${t.w}"></div><div><label>Height %</label><input id="th" type="number" value="${t.h}"></div></div>
+    <div class="row" style="margin-top:14px">${cancelBtn}${id?`<button class="bad" onclick="A.tableDel('${id}')">Delete</button>`:''}<button class="pri" onclick="A.tableSave('${id||''}')">Save</button></div>`);
+  },
+  tableSave(id){const d={name:$('#tn').value.trim()||'T',seats:+$('#ts').value||1,shape:$('#tsh').value,section:$('#tse').value.trim(),w:clamp(+$('#tw').value||13,5,40),h:clamp(+$('#th').value||22,6,40)};
+    if(id)Object.assign(tbl(id),d);else db.tables.push({id:uid(),x:40,y:40,...d});save();shut();render()},
+  tableDel(id){if(tableOrder(id)){toast('Table in use',true);return}db.tables=db.tables.filter(t=>t.id!==id);save();shut();render()},
+  /* order */
+  pickCat(c){S.cat=c;S.search='';render()},
+  search(v){S.search=v;$('#items').innerHTML=itemsHtml()},
+  add(id){
+    const it=db.menu.find(i=>i.id===id);
+    if(it.mods.length){modal(`<h3>${esc(it.name)}</h3><p class="hint">Choose modifiers</p>${it.mods.map((m,i)=>`<label class="sel" style="color:var(--text);font-size:15px;margin:4px 0"><input type="checkbox" id="m${i}"> ${esc(m.name)} ${m.price?`<span style="margin-left:auto;color:var(--accent)">+${money(m.price)}</span>`:''}</label>`).join('')}
+      <label>Note to kitchen</label><input id="nt" placeholder="Allergies, requests"><div class="row" style="margin-top:14px">${cancelBtn}<button class="pri" onclick="A.addDo('${id}',true)">Add to order</button></div>`)}
+    else A.addDo(id,false);
+  },
+  addDo(id,hm){
+    const it=db.menu.find(i=>i.id===id),o=ord(S.orderId),mods=hm?it.mods.filter((_,i)=>$('#m'+i).checked):[],note=hm?$('#nt').value.trim():'';
+    if(it.stock!==null&&o.items.filter(l=>l.itemId===id&&!l.void&&l.state!=='served').reduce((a,l)=>a+l.qty,0)>=it.stock){toast('Not enough stock',true);return}
+    const seat=o.type==='dine'?S.seat:0,course=o.type==='dine'?S.course:1,key=JSON.stringify([id,mods.map(m=>m.name),note,seat,course]);
+    const ex=o.items.find(l=>l.state==='new'&&!l.void&&l.key===key);
+    if(ex)ex.qty++;else o.items.push({id:uid(),itemId:id,key,name:it.name,cat:it.cat,station:catOf(it.cat).station,price:priceFor(it),qty:1,mods,note,seat,course,state:'new'});
+    save();shut();A.refresh();
+  },
+  refresh(){const o=ord(S.orderId);if(S.view==='order'&&$('#ticket')){$('#ticket').innerHTML=ticketHtml(o)}else render()},
+  qty(lid,d){const o=ord(S.orderId),l=o.items.find(x=>x.id===lid);l.qty+=d;if(l.qty<=0)o.items=o.items.filter(x=>x.id!==lid);save();A.refresh()},
+  noteModal(lid){const l=ord(S.orderId).items.find(x=>x.id===lid);modal(`<h3>Note for ${esc(l.name)}</h3><input id="nt" value="${esc(l.note)}"><div class="row" style="margin-top:14px">${cancelBtn}<button class="pri" onclick="A.noteSave('${lid}')">Save</button></div>`)},
+  noteSave(lid){const l=ord(S.orderId).items.find(x=>x.id===lid);l.note=$('#nt').value.trim();l.key=uid();save();shut();A.refresh()},
+  moveLine(lid){const o=ord(S.orderId),l=o.items.find(x=>x.id===lid);
+    modal(`<h3>${esc(l.name)}</h3><label>Seat</label><select id="ms">${['<option value="0">Table</option>',...Array.from({length:o.guests||1},(_,i)=>`<option value="${i+1}" ${l.seat===i+1?'selected':''}>Seat ${i+1}</option>`)].join('')}</select><label>Course</label><select id="mc">${[1,2,3].map(c=>`<option ${l.course===c?'selected':''}>${c}</option>`).join('')}</select>
+    <div class="row" style="margin-top:14px">${cancelBtn}<button class="pri" onclick="A.moveSave('${lid}')">Save</button></div>`)},
+  moveSave(lid){const l=ord(S.orderId).items.find(x=>x.id===lid);l.seat=+$('#ms').value;l.course=+$('#mc').value;l.key=uid();save();shut();A.refresh()},
+  setSeat(n){S.seat=n;A.refresh()},setCourse(n){S.course=n;A.refresh()},
+  send(){
+    const o=ord(S.orderId),now=Date.now();let n=0;
+    o.items.forEach(l=>{if(l.state==='new'&&!l.void){const hold=l.course>Math.max(1,o.fired||1);l.state=hold?'held':'sent';if(!hold){l.sentAt=now;n++}const it=db.menu.find(m=>m.id===l.itemId);if(it&&it.stock!==null)it.stock=Math.max(0,it.stock-l.qty)}});
+    save();toast(n?'Sent to kitchen':'Held for later course');A.refresh();
+  },
+  fire(c){const o=ord(S.orderId),now=Date.now();o.fired=Math.max(o.fired||1,c);o.items.forEach(l=>{if(l.state==='held'&&l.course<=c){l.state='sent';l.sentAt=now}});log('Fired course '+c+' on '+orderName(o));save();toast('Course '+c+' fired');A.refresh()},
+  serve(lid){const l=ord(S.orderId).items.find(x=>x.id===lid);l.state='served';save();A.refresh()},
+  billReq(){const o=ord(S.orderId);o.billReq=!o.billReq;save();A.refresh()},
+  voidModal(lid){const l=ord(S.orderId).items.find(x=>x.id===lid);
+    modal(`<h3>Void ${esc(l.name)}</h3><label>Reason</label><select id="vr">${['Customer changed mind','Wrong item','Kitchen error','Complimentary','Other'].map(r=>`<option>${r}</option>`).join('')}</select>${apprHtml()}<div class="row" style="margin-top:14px">${cancelBtn}<button class="bad" onclick="A.voidDo('${lid}')">Void item</button></div>`)},
+  voidDo(lid){const m=appr();if(!m)return;const o=ord(S.orderId),l=o.items.find(x=>x.id===lid);l.void=true;
+    if(l.state!=='new'){const it=db.menu.find(i=>i.id===l.itemId);if(it&&it.stock!==null)it.stock+=l.qty}
+    log(`Voided ${l.qty}x ${l.name} on ${orderName(o)} (${$('#vr').value}), approved by ${m.name}`);save();shut();A.refresh()},
+  voidOrder(){
+    const o=ord(S.orderId);if(o.payments.length){toast('Order has payments',true);return}
+    if(!o.items.length){o.status='void';o.closed=Date.now();save();A.go('floor');return}
+    modal(`<h3>Void entire order?</h3><p class="hint">${esc(orderName(o))} with ${o.items.length} line(s)</p>${apprHtml()}<div class="row">${cancelBtn}<button class="bad" onclick="A.voidOrderDo()">Void order</button></div>`);
+  },
+  voidOrderDo(){const m=appr();if(!m)return;const o=ord(S.orderId);o.items.forEach(l=>{if(!l.void&&l.state!=='new'){const it=db.menu.find(i=>i.id===l.itemId);if(it&&it.stock!==null)it.stock+=l.qty}});
+    o.status='void';o.closed=Date.now();log(`Voided order #${o.no} (${orderName(o)}), approved by ${m.name}`);save();shut();A.go('floor')},
+  moveTable(){const free=db.tables.filter(t=>!tableOrder(t.id));modal(`<h3>Move to table</h3><div class="grid" style="grid-template-columns:repeat(4,1fr)">${free.map(t=>`<button onclick="A.moveDo('${t.id}')">${esc(t.name)}</button>`).join('')||'No free tables'}</div>`)},
+  moveDo(id){ord(S.orderId).tableId=id;save();shut();A.refresh()},
+  discModal(){const o=ord(S.orderId);
+    modal(`<h3>Discount</h3><div class="row"><div><label>Type</label><select id="dt"><option value="%">Percent</option><option value="$">Amount</option></select></div><div><label>Value</label><input id="dv" type="number" min="0" step="0.01" value="${o.discount?o.discount.val:''}"></div></div>
+    <label>Reason</label><select id="dr">${['Regular guest','Service recovery','Staff meal','Promotion','Manager comp'].map(r=>`<option>${r}</option>`).join('')}</select>${isMgr()?'':'<p class="hint">Servers can give up to 20% alone. Larger or fixed amount discounts need a manager PIN.</p>'+apprHtml()}
+    <div class="row" style="margin-top:14px">${cancelBtn}<button class="bad" onclick="A.discClear()">Remove</button><button class="pri" onclick="A.discApply()">Apply</button></div>`)},
+  discClear(){ord(S.orderId).discount=null;save();shut();A.refresh()},
+  discApply(){const v=+$('#dv').value,t=$('#dt').value;if(!(v>0)){toast('Enter a value',true);return}
+    let by=S.user;if(!isMgr()&&(t==='$'||v>20)){by=appr();if(!by)return}
+    const o=ord(S.orderId);o.discount={type:t,val:v,by:by.name,reason:$('#dr').value};log(`Discount ${v}${t==='%'?'%':''} on ${orderName(o)} (${o.discount.reason}), approved by ${by.name}`);save();shut();A.refresh()},
+  preBill(){const o=ord(S.orderId);modal(receiptHtml(o,true)+`<div class="row" style="margin-top:12px"><button onclick="A.shut()">Close</button><button class="pri" onclick="window.print()">Print</button></div>`)},
+  receipt(id){modal(receiptHtml(ord(id))+`<div class="row" style="margin-top:12px"><button onclick="A.shut()">Close</button><button class="pri" onclick="window.print()">Print</button></div>`)},
+  /* payment */
+  payModal(){
+    const o=ord(S.orderId);if(o.items.some(i=>i.state==='new'&&!i.void)){toast('Send new items first',true);return}
+    S.P={mode:'all',method:'card',n:2,sel:[],tip:0,amt:null,ten:''};A.payDraw();
+  },
+  payAmount(){
+    const o=ord(S.orderId),t=totals(o),P=S.P;if(P.amt!==null)return P.amt;
+    if(P.mode==='all')return t.due;
+    if(P.mode==='equal')return round(t.due/Math.max(1,P.n));
+    const un=o.items.filter(l=>!l.void&&!l.paid),sel=un.filter(l=>P.sel.includes(l.id));
+    if(!sel.length)return 0;if(sel.length===un.length)return t.due;
+    return round(sel.reduce((a,l)=>a+lineTotal(l),0)/t.sub*t.total);
+  },
+  payDraw(){
+    const o=ord(S.orderId),t=totals(o),P=S.P,amt=A.payAmount(),tip=P.tip,un=o.items.filter(l=>!l.void&&!l.paid),tendered=+P.ten||0;
+    const quick=[...new Set([Math.ceil(amt),Math.ceil(amt/5)*5,Math.ceil(amt/10)*10,Math.ceil(amt/20)*20,Math.ceil(amt/50)*50])].filter(v=>v>=amt).slice(0,5);
+    modal(`<h3>Payment, ${esc(orderName(o))}</h3><div class="row"><div class="card stat"><span>Total</span><b>${money(t.total)}</b></div><div class="card stat"><span>Remaining</span><b>${money(t.due)}</b></div></div>
+    <div class="seg" style="margin:12px 0">${[['all','Whole bill'],['equal','Split equally'],['items','By items']].map(([k,l])=>`<button class="${P.mode===k?'on':''}" onclick="A.payMode('${k}')">${l}</button>`).join('')}</div>
+    ${P.mode==='equal'?`<div class="row"><label style="flex:0 0 auto;margin:0">Split between</label><input type="number" min="1" max="20" value="${P.n}" onchange="S.P.n=Math.max(1,+this.value||1);S.P.amt=null;A.payDraw()"></div>`:''}
+    ${P.mode==='items'?un.map(l=>`<div class="sel ${P.sel.includes(l.id)?'on':''}" onclick="A.paySel('${l.id}')"><input type="checkbox" ${P.sel.includes(l.id)?'checked':''}><span style="flex:1">${l.qty}x ${esc(l.name)} ${l.seat?`<span class="al">S${l.seat}</span>`:''}</span><b>${money(lineTotal(l))}</b></div>`).join('')||'<p class="hint">All items paid</p>':''}
+    <div class="row"><div><label>Amount (tax and discount included)</label><input id="amt" type="number" step="0.01" value="${amt.toFixed(2)}" onchange="S.P.amt=round(+this.value||0);A.payDraw()"></div>
+    <div><label>Tip</label><input id="tip" type="number" step="0.01" min="0" value="${tip}" onchange="S.P.tip=round(+this.value||0);A.payDraw()"></div></div>
+    <div class="quick"><button class="sm ${tip===0?'on':''}" onclick="A.payTip(0)">No tip</button>${db.settings.tips.map(p=>`<button class="sm ${tip===round(amt*p/100)&&tip>0?'on':''}" onclick="A.payTip(${p})">${p}% (${money(round(amt*p/100))})</button>`).join('')}</div>
+    <div class="seg" style="margin:14px 0 6px">${['card','cash','voucher'].map(m=>`<button class="${P.method===m?'on':''}" onclick="S.P.method='${m}';A.payDraw()" style="text-transform:capitalize">${m}</button>`).join('')}</div>
+    ${P.method==='cash'?`<label>Cash tendered</label><input type="number" step="0.01" value="${P.ten}" onchange="S.P.ten=this.value;A.payDraw()"><div class="quick">${quick.map(v=>`<button class="sm" onclick="S.P.ten=${v};A.payDraw()">${money(v)}</button>`).join('')}</div>${tendered>=amt&&amt>0?`<p style="color:var(--ok);font-size:20px;font-weight:700;margin:8px 0 0">Change due: ${money(round(tendered-amt))}</p>`:''}`:''}
+    <div class="row" style="margin-top:16px">${cancelBtn}<button class="ok" onclick="A.payNow()" ${amt>0?'':'disabled'}>Take ${money(amt+tip)}</button></div>`,true);
+  },
+  payMode(k){S.P.mode=k;S.P.amt=null;S.P.sel=[];A.payDraw()},
+  paySel(id){const s=S.P.sel,i=s.indexOf(id);i<0?s.push(id):s.splice(i,1);S.P.amt=null;A.payDraw()},
+  payTip(p){S.P.tip=p===0?0:round(A.payAmount()*p/100);A.payDraw()},
+  payNow(){
+    const o=ord(S.orderId),t=totals(o),P=S.P;let amt=A.payAmount();if(!(amt>0))return;if(amt>t.due)amt=t.due;
+    const ten=+P.ten||0,paidLines=P.mode==='items'?P.sel.slice():[];
+    o.payments.push({id:uid(),method:P.method,amount:amt,tip:P.tip,at:Date.now(),by:S.user.name,tendered:P.method==='cash'&&ten>=amt?ten:null,change:P.method==='cash'&&ten>amt?round(ten-amt):0});
+    o.items.forEach(l=>{if(paidLines.includes(l.id))l.paid=true});
+    if(totals(o).due<=0.004){o.status='paid';o.closed=Date.now();o.items.forEach(l=>{if(!l.void&&l.state!=='new')l.state='served'});log(`Closed order #${o.no} ${money(totals(o).total)}`);save();shut();toast('Paid in full');A.receipt(o.id);S.orderId=null;S.view='floor';render()}
+    else{if(P.mode==='equal')P.n=Math.max(1,P.n-1);save();toast('Partial payment taken');S.P={mode:P.mode,method:P.method,n:P.n,sel:[],tip:0,amt:null,ten:''};A.refresh();A.payDraw()}
+  },
+  /* kitchen */
+  station(s){S.station=s;S.lastSent=null;render()},kview(v){S.kview=v;render()},
+  kDone(oid,lid){const l=ord(oid).items.find(x=>x.id===lid);l.state='ready';l.readyAt=Date.now();save();render()},
+  kBump(oid){ord(oid).items.forEach(l=>{if(l.state==='sent'&&!l.void&&(S.station==='All'||l.station===S.station)){l.state='ready';l.readyAt=Date.now()}});save();render()},
+  kRecall(oid,lid){const l=ord(oid).items.find(x=>x.id===lid);l.state='sent';save();render()},
+  /* book */
+  addRes(){const n=$('#rn').value.trim();if(!n){toast('Name required',true);return}db.res.push({id:uid(),name:n,size:+$('#rs').value||2,date:$('#rd').value,time:$('#rt').value,phone:$('#rp').value,note:$('#rm').value,status:'booked',tableId:null});log('Reservation for '+n);save();render()},
+  resSet(id,s){db.res.find(r=>r.id===id).status=s;save();render()},
+  addWait(){const n=$('#wn').value.trim();if(!n)return;db.wait.push({id:uid(),name:n,size:+$('#ws').value||2,quote:+$('#wq').value||20,added:Date.now()});save();render()},
+  waitDel(id){db.wait=db.wait.filter(w=>w.id!==id);save();render()},
+  seatParty(kind,id){
+    const p=kind==='res'?db.res.find(r=>r.id===id):db.wait.find(w=>w.id===id),free=db.tables.filter(t=>!tableOrder(t.id));
+    modal(`<h3>Seat ${esc(p.name)} (${p.size})</h3><p class="hint">Tables that fit are highlighted</p><div class="grid" style="grid-template-columns:repeat(4,1fr)">${free.map(t=>`<button class="${t.seats>=p.size?'pri':''}" onclick="A.seatGo('${kind}','${id}','${t.id}')">${esc(t.name)}<br><small>${t.seats} seats</small></button>`).join('')||'No free tables'}</div>`);
+  },
+  seatGo(kind,id,tid){const p=kind==='res'?db.res.find(r=>r.id===id):db.wait.find(w=>w.id===id),o=A.mk(tid,'dine',p.size);
+    if(kind==='res'){p.status='seated';p.tableId=tid}else db.wait=db.wait.filter(w=>w.id!==id);save();shut();A.goOrder(o.id)},
+  /* bills & reports */
+  rows(){const q=(S.msearch||'').toLowerCase();$('#rows').innerHTML=billRows(db.orders.filter(o=>o.status!=='open').sort((a,b)=>b.closed-a.closed).filter(o=>!q||String(o.no).includes(q)||o.server.toLowerCase().includes(q)).slice(0,120))},
+  refundModal(id){const o=ord(id);modal(`<h3>Refund order #${o.no}</h3><p class="hint">Refund ${money(totals(o).total)}. The order is removed from sales reports.</p><label>Refund to</label><select id="rm1">${[...new Set(o.payments.map(p=>p.method))].map(m=>`<option>${m}</option>`).join('')}</select><label>Reason</label><input id="rm2"><div class="row" style="margin-top:14px">${cancelBtn}<button class="bad" onclick="A.refundDo('${id}')">Refund</button></div>`)},
+  refundDo(id){const o=ord(id),t=totals(o);o.refund={at:Date.now(),by:S.user.name,amount:t.total,method:$('#rm1').value,reason:$('#rm2').value};log(`Refunded order #${o.no} ${money(t.total)} (${o.refund.reason||'no reason'})`);save();shut();render()},
+  range(r){S.range=r;render()},
+  exportCsv(){
+    const rows=[['Order','Closed','Table','Server','Subtotal','Discount','Tax','Total','Tips','Refunded']];
+    db.orders.filter(o=>o.status==='paid').forEach(o=>{const t=totals(o);rows.push([o.no,new Date(o.closed).toISOString(),orderName(o),o.server,t.sub,t.disc,t.tax,t.total,t.tips,o.refund?'yes':'no'])});
+    A.download('sales.csv',rows.map(r=>r.map(c=>'"'+String(c??'').replace(/"/g,'""')+'"').join(',')).join('\n'),'text/csv');
+  },
+  download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click()},
+  /* cash */
+  openShift(){db.shifts.push({id:uid(),openedBy:S.user.name,openedAt:Date.now(),float:+$('#fl').value||0,tx:[]});log('Opened shift');save();render()},
+  cashTx(type){modal(`<h3>Paid ${type}</h3><label>Amount</label><input id="ca" type="number" step="0.01"><label>Reason</label><input id="cr"><div class="row" style="margin-top:14px">${cancelBtn}<button class="pri" onclick="A.cashTxDo('${type}')">Save</button></div>`)},
+  cashTxDo(type){const a=+$('#ca').value;if(!(a>0))return;currentShift().tx.push({id:uid(),at:Date.now(),type,amount:a,reason:$('#cr').value||'-',by:S.user.name});log(`Cash paid ${type} ${money(a)}`);save();shut();render()},
+  closeShiftModal(){const s=shiftStats(currentShift());modal(`<h3>Close shift</h3><p class="hint">Expected in drawer: <b>${money(s.expected)}</b></p><label>Counted cash</label><input id="cc" type="number" step="0.01"><div class="row" style="margin-top:14px">${cancelBtn}<button class="pri" onclick="A.closeShift()">Close and print Z</button></div>`)},
+  closeShift(){const v=$('#cc').value;if(v===''){toast('Enter counted cash',true);return}const sh=currentShift();sh.closedAt=Date.now();sh.counted=+v;log('Closed shift');save();A.zView(sh.id);render()},
+  zView(id){modal(zHtml(db.shifts.find(s=>s.id===id))+`<div class="row" style="margin-top:12px"><button onclick="A.shut()">Close</button><button class="pri" onclick="window.print()">Print</button></div>`)},
+  /* admin */
+  tab(t){S.tab=t;S.msearch='';render()},
+  menuRows(){$('#mrows').innerHTML=menuRows()},
+  toggleItem(id,on){db.menu.find(m=>m.id===id).active=on;save()},
+  itemModal(id){
+    const i=id?db.menu.find(m=>m.id===id):{name:'',cat:db.cats[0].name,price:0,cost:0,mods:[],stock:null,allergens:[]};
+    modal(`<h3>${id?'Edit':'New'} item</h3><label>Name</label><input id="in" value="${esc(i.name)}"><div class="row"><div><label>Category</label><select id="ic">${db.cats.map(c=>`<option ${c.name===i.cat?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div><div><label>Price</label><input id="ip" type="number" step="0.01" value="${i.price}"></div><div><label>Cost</label><input id="ico" type="number" step="0.01" value="${i.cost||0}"></div></div>
+    <div class="row"><div><label>Stock (blank = unlimited)</label><input id="is" type="number" value="${i.stock??''}"></div><div><label>Allergens</label><input id="ia" maxlength="5" placeholder="G D N S V" value="${i.allergens.join('')}"></div></div>
+    <label>Modifiers (one per line: name, extra price)</label><textarea id="im" rows="4">${i.mods.map(m=>m.name+', '+m.price).join('\n')}</textarea>
+    <div class="row" style="margin-top:14px">${cancelBtn}${id?`<button class="bad" onclick="A.itemDel('${id}')">Delete</button>`:''}<button class="pri" onclick="A.itemSave('${id||''}')">Save</button></div>`);
+  },
+  itemSave(id){const name=$('#in').value.trim();if(!name){toast('Name required',true);return}
+    const mods=$('#im').value.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const p=l.split(',');return{name:p[0].trim(),price:+(p[1]||0)||0}}),st=$('#is').value;
+    const d={name,cat:$('#ic').value,price:+$('#ip').value||0,cost:+$('#ico').value||0,mods,stock:st===''?null:+st,allergens:$('#ia').value.toUpperCase().split('').filter(c=>ALG[c])};
+    if(id){const old=db.menu.find(m=>m.id===id);if(old.price!==d.price)log(`Price change ${name}: ${money(old.price)} to ${money(d.price)}`);Object.assign(old,d)}else db.menu.push({id:uid(),active:true,...d});save();shut();render()},
+  itemDel(id){if(confirm('Delete this item?')){db.menu=db.menu.filter(m=>m.id!==id);save();shut();render()}},
+  addCat(){const n=$('#nc').value.trim();if(n&&!db.cats.some(c=>c.name===n)){db.cats.push({name:n,station:$('#ns').value.trim()||'Kitchen',color:$('#ncc').value});save();render()}},
+  moveCat(i,d){const j=i+d;if(j<0||j>=db.cats.length)return;[db.cats[i],db.cats[j]]=[db.cats[j],db.cats[i]];save();render()},
+  delCat(i){if(db.menu.some(m=>m.cat===db.cats[i].name)){toast('Category has items',true);return}db.cats.splice(i,1);save();render()},
+  addStaff(){const n=$('#sn').value.trim(),p=$('#sp4').value.trim();if(!n||!/^\d{4}$/.test(p)){toast('Name and 4 digit PIN required',true);return}if(db.staff.some(s=>s.pin===p)){toast('PIN already used',true);return}db.staff.push({id:uid(),name:n,pin:p,role:$('#sr').value,rate:+$('#srt').value||0});save();render()},
+  delStaff(id){if(id===S.user.id){toast("You can't delete yourself",true);return}db.staff=db.staff.filter(s=>s.id!==id);save();render()},
+  saveSettings(){const g=id=>$(id);
+    Object.assign(db.settings,{name:g('#s1').value,address:g('#s2').value,tax:+g('#s3').value||0,service:+g('#s4').value||0,currency:g('#s5').value||'$',tips:g('#s6').value.split(',').map(x=>+x).filter(x=>x>0),warn:+g('#s7').value||10,late:+g('#s8').value||20,sound:g('#s9').checked,
+      hh:{on:g('#h1').checked,start:g('#h2').value,end:g('#h3').value,pct:+g('#h4').value||0,cats:[...document.querySelectorAll('.hc:checked')].map(c=>c.value)}});
+    save();toast('Settings saved');render()},
+  backup(){A.download('pos-backup-'+ymd(Date.now())+'.json',JSON.stringify(db),'application/json')},
+  restore(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(d.v!==2||!d.menu)throw 0;db=d;save();S.user=null;render();toast('Backup restored')}catch(e){toast('Invalid backup file',true)}};r.readAsText(f)},
+  resetAll(){if(confirm('Erase ALL data and restore demo data?')){localStorage.removeItem(KEY);S.user=null;S.orderId=null;load();render()}}
+};
+
+/* ===================== EVENTS ===================== */
+document.addEventListener('keydown',e=>{
+  const tag=(e.target.tagName||'').toLowerCase();
+  if(!S.user&&/^\d$/.test(e.key))A.pinKey(e.key);
+  else if(!S.user&&e.key==='Backspace')A.pinKey('⌫');
+  else if(e.key==='Escape')shut();
+  else if(e.key==='/'&&S.view==='order'&&!['input','textarea','select'].includes(tag)){e.preventDefault();const s=$('#srch');s&&s.focus()}
+});
+/* live sync between tabs and screens on the same device */
+window.addEventListener('storage',e=>{
+  if(e.key!==KEY||!e.newValue)return;
+  try{db=JSON.parse(e.newValue);if(S.user)S.user=db.staff.find(s=>s.id===S.user.id)||null;if(!$('#modal')&&!S.edit)render()}catch(x){}
+});
+
+/* ===================== BOOT ===================== */
+load();
+render();
+/* deep links for demos and screenshots: index.html?shot=floor&role=manager (demo data only) */
+(function(){
+  const q=new URLSearchParams(location.search);
+  if(!q.get('shot')||!db.demo)return;
+  if(q.get('theme')){db.settings.theme=q.get('theme')}
+  const roles={manager:0,server:1,kitchen:3};
+  if(q.get('shot')==='login'){render();return}
+  S.user=db.staff[roles[q.get('role')||'manager']];S.view=q.get('shot');
+  if(q.get('range'))S.range=q.get('range');if(q.get('station'))S.station=q.get('station');if(q.get('tab'))S.tab=q.get('tab');if(q.get('edit'))S.edit=true;if(q.get('mode'))S.mode=q.get('mode');
+  const busy=db.orders.find(o=>o.status==='open'&&o.tableId&&tbl(o.tableId).name==='T5');
+  if(S.view==='order'||q.get('modal')){S.orderId=busy.id;S.view='order';S.seat=2;S.cat='Mains'}
+  render();
+  const m=q.get('modal');
+  if(m==='pay'){busy.items.forEach(l=>{if(l.state==='new')l.state='sent'});A.payModal();S.P.mode='items';S.P.sel=[busy.items[0].id,busy.items[1].id];S.P.tip=3;A.payDraw()}
+  if(m==='mods')A.add(db.menu.find(i=>i.name==='Ribeye Steak').id);
+  if(m==='receipt'){A.receipt(db.orders.filter(o=>o.status==='paid').sort((a,b)=>b.closed-a.closed)[0].id)}
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+﻿# Claude / AI tooling
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+.mcp.json
+.anthropic/
+
+# OS / editor
+Thumbs.db
+.DS_Store
+desktop.ini
+.vscode/
+.idea/
